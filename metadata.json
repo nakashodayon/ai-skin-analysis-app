@@ -1,0 +1,6 @@
+{
+  "name": "AI肌分析アプリbeta",
+  "description": "顔の画像または動画をアップロードして、Gemini APIによる詳細な肌質分析と輪郭分析レポートを取得します",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
