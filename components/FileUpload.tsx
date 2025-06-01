@@ -1,31 +1,94 @@
-
 import React, { useState, useCallback, ChangeEvent, useRef, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
+import { StorageService, ImageService } from '../services/supabaseService';
 import { UploadedImageFile } from '../types';
 
 interface FileUploadProps {
   onFilesSelected: (files: UploadedImageFile[]) => void;
   maxFiles?: number;
   isLoading: boolean;
-  // Optional: If we want to clear files from parent, e.g., when a set is removed.
-  // However, typically FileUpload manages its own internal selection until "onFilesSelected"
-  // initialFiles?: UploadedImageFile[]; 
+  analysisPointId?: string; // Add analysis point ID for storage organization
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected, maxFiles = 10, isLoading /*, initialFiles = [] */ }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ 
+  onFilesSelected, 
+  maxFiles = 10, 
+  isLoading,
+  analysisPointId 
+}) => {
+  const { user: clerkUser } = useUser();
   const [selectedFiles, setSelectedFiles] = useState<UploadedImageFile[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [pendingSupabaseUploads, setPendingSupabaseUploads] = useState<UploadedImageFile[]>([]);
   const nextFileId = useRef(0); 
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for the file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Effect to clear selected files if isLoading becomes false (e.g. analysis complete/cancelled for this set)
-  // This might be too aggressive if user wants to re-analyze same files.
-  // For now, files stay selected until user changes them or removes the analysis point.
-  // If `initialFiles` prop was used and changed, we could sync here:
-  // useEffect(() => {
-  //   setSelectedFiles(initialFiles);
-  //   nextFileId.current = initialFiles.length; // rough reset if needed
-  // }, [initialFiles]);
+  // Handle Supabase uploads when analysisPointId becomes available
+  useEffect(() => {
+    if (!clerkUser || !analysisPointId || pendingSupabaseUploads.length === 0) return;
 
+    const processPendingUploads = async () => {
+      console.log(`Processing ${pendingSupabaseUploads.length} pending Supabase uploads with analysisPointId: ${analysisPointId}`);
+      
+      for (const fileData of pendingSupabaseUploads) {
+        try {
+          setUploadingFiles(prev => new Set(prev).add(fileData.id));
+          
+          // Recreate File object from the stored data
+          const response = await fetch(fileData.previewUrl);
+          const blob = await response.blob();
+          const file = new File([blob], fileData.name, { type: fileData.type });
+          
+          const { storagePath, publicUrl } = await StorageService.uploadImage(
+            file,
+            clerkUser.id,
+            analysisPointId
+          );
+          
+          // Save image metadata to database
+          await ImageService.saveImageMetadata(
+            analysisPointId,
+            fileData.name,
+            file.size,
+            fileData.type,
+            storagePath
+          );
+          
+          // Update the file with storage info
+          setSelectedFiles(prevFiles => 
+            prevFiles.map(f => 
+              f.id === fileData.id 
+                ? { ...f, storageUrl: publicUrl, storagePath: storagePath }
+                : f
+            )
+          );
+          
+          console.log(`Supabase upload successful for: ${fileData.name}`);
+          
+        } catch (error) {
+          console.error(`Supabase upload failed for ${fileData.name}:`, error);
+        } finally {
+          setUploadingFiles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(fileData.id);
+            return newSet;
+          });
+        }
+      }
+      
+      // Clear pending uploads
+      setPendingSupabaseUploads([]);
+      
+      // Notify parent with updated files
+      setSelectedFiles(currentFiles => {
+        onFilesSelected(currentFiles);
+        return currentFiles;
+      });
+    };
+
+    processPendingUploads();
+  }, [analysisPointId, clerkUser, pendingSupabaseUploads, onFilesSelected]);
 
   const handleFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -45,18 +108,74 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected, maxFiles = 10,
             localError = (localError ? localError + "\n" : "") + `${file.name} は画像または動画ファイルではありません。スキップされました。`;
             continue;
         }
+        
         try {
+            const fileId = `file-${nextFileId.current++}`;
+            setUploadingFiles(prev => new Set(prev).add(fileId));
+            
+            // Convert to base64 for Gemini API (existing functionality)
             const base64 = await convertFileToBase64(file);
             const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
-            newProcessedFiles.push({
-                id: `file-${nextFileId.current++}`, // Ensure unique IDs even across multiple FileUpload instances
+            
+            // Create initial file object
+            const uploadedFile: UploadedImageFile = {
+                id: fileId,
                 name: file.name,
                 type: file.type,
                 base64: base64.split(',')[1],
                 previewUrl,
+                storageUrl: '', // Will be updated after Supabase upload
+                storagePath: '', // Will be updated after Supabase upload
+            };
+            
+            // Upload to Supabase Storage if user is authenticated and analysisPointId is available
+            if (clerkUser && analysisPointId) {
+                console.log(`Starting upload for file: ${file.name}, analysisPointId: ${analysisPointId}`);
+                try {
+                    const { storagePath, publicUrl } = await StorageService.uploadImage(
+                        file,
+                        clerkUser.id,
+                        analysisPointId
+                    );
+                    uploadedFile.storageUrl = publicUrl;
+                    uploadedFile.storagePath = storagePath;
+                    console.log(`File uploaded to storage: ${storagePath}`);
+                    
+                    // Save image metadata to database
+                    const savedImageMetadata = await ImageService.saveImageMetadata(
+                        analysisPointId,
+                        file.name,
+                        file.size,
+                        file.type,
+                        storagePath
+                    );
+                    console.log(`Image metadata saved:`, savedImageMetadata);
+                } catch (storageError) {
+                    console.error('Failed to upload to Supabase storage:', storageError);
+                    // Continue with local file handling even if storage upload fails
+                }
+            } else if (clerkUser && !analysisPointId) {
+                console.log(`Deferring Supabase upload for file: ${file.name} - waiting for analysisPointId`);
+                // Add to pending uploads to be processed when analysisPointId becomes available
+                setPendingSupabaseUploads(prev => [...prev, uploadedFile]);
+            } else {
+                console.warn(`Skipping Supabase upload - clerkUser: ${!!clerkUser}, analysisPointId: ${analysisPointId}`);
+            }
+            
+            newProcessedFiles.push(uploadedFile);
+            setUploadingFiles(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(fileId);
+                return newSet;
             });
+            
         } catch (e) {
             localError = (localError ? localError + "\n" : "") + `${file.name} の処理中にエラーが発生しました。`;
+            setUploadingFiles(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(`file-${nextFileId.current - 1}`);
+                return newSet;
+            });
         }
     }
     
@@ -64,12 +183,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected, maxFiles = 10,
     onFilesSelected(newProcessedFiles);   
 
     if (localError) setError(localError);
-
-    // Don't reset event.target.value here. If the user re-selects the same file after an error or modification,
-    // the onChange event might not fire. It's generally better to let the browser handle this.
-    // If a true "clear" button for the input is needed, it's handled differently.
-  }, [maxFiles, onFilesSelected]);
-
+  }, [maxFiles, onFilesSelected, clerkUser, analysisPointId]);
 
   const convertFileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -80,10 +194,26 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected, maxFiles = 10,
     });
   };
 
-  const removeFile = (fileIdToRemove: string) => {
+  const removeFile = async (fileIdToRemove: string) => {
+    const fileToRemove = selectedFiles.find(f => f.id === fileIdToRemove);
+    
+    // Delete from Supabase storage if it was uploaded
+    if (fileToRemove?.storagePath && clerkUser) {
+        try {
+            await StorageService.deleteImage(fileToRemove.storagePath);
+        } catch (error) {
+            console.warn('Failed to delete file from storage:', error);
+        }
+    }
+    
     const updatedFiles = selectedFiles.filter(file => file.id !== fileIdToRemove);
     setSelectedFiles(updatedFiles);
+    
+    // Also remove from pending uploads if it exists there
+    setPendingSupabaseUploads(prev => prev.filter(file => file.id !== fileIdToRemove));
+    
     onFilesSelected(updatedFiles); 
+    
     // Clear input value so user can re-add the same file if they want
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -104,24 +234,32 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected, maxFiles = 10,
   
   const currentFileCount = selectedFiles.length;
   const fileInputLabel = `顔の画像/動画を選択 (${currentFileCount}/${maxFiles} ファイル選択済)`;
-
+  const isAnyFileUploading = uploadingFiles.size > 0;
 
   return (
-    <div className="w-full py-4"> {/* Removed p-6, bg-white, shadow-md, rounded-lg from here, will be handled by parent div in App.tsx */}
-      <label htmlFor={`file-upload-input-${React.useId()}`} className="block text-sm font-medium text-gray-700 mb-1"> {/* Use useId for unique label association */}
+    <div className="w-full py-4">
+      <label htmlFor={`file-upload-input-${React.useId()}`} className="block text-sm font-medium text-gray-700 mb-1">
         {fileInputLabel}
       </label>
       <input
-        id={`file-upload-input-${React.useId()}`} // Ensure unique ID
+        id={`file-upload-input-${React.useId()}`}
         ref={fileInputRef}
         type="file"
         multiple
         accept="image/*,video/*"
         onChange={handleFileChange}
-        disabled={isLoading}
+        disabled={isLoading || isAnyFileUploading}
         className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
         aria-describedby={error ? `file-upload-error-${React.useId()}` : undefined}
       />
+      
+      {isAnyFileUploading && (
+        <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
+          <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+          ファイルをアップロード中...
+        </div>
+      )}
+      
       {error && <p id={`file-upload-error-${React.useId()}`} className="mt-2 text-sm text-red-600 whitespace-pre-line" role="alert">{error}</p>}
       
       {selectedFiles.length > 0 && (
@@ -140,15 +278,34 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected, maxFiles = 10,
                   </div>
                 )}
                 <p className="text-xs text-gray-500 mt-1 truncate" title={file.name}>{file.name}</p>
-                {!isLoading && (
-                    <button
-                        onClick={() => removeFile(file.id)}
-                        className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0 w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
-                        title={`Remove ${file.name}`}
-                        aria-label={`Remove ${file.name}`}
-                    >
-                        X
-                    </button>
+                
+                {/* Show storage status indicator */}
+                {file.storageUrl && (
+                  <div className="absolute top-0.5 left-0.5 bg-green-500 text-white rounded-full p-0 w-4 h-4 flex items-center justify-center text-xs">
+                    ✓
+                  </div>
+                )}
+                
+                {/* Show pending upload indicator */}
+                {!file.storageUrl && pendingSupabaseUploads.some(p => p.id === file.id) && (
+                  <div className="absolute top-0.5 left-0.5 bg-yellow-500 text-white rounded-full p-0 w-4 h-4 flex items-center justify-center text-xs">
+                    ⏳
+                  </div>
+                )}
+                
+                {uploadingFiles.has(file.id) ? (
+                  <div className="absolute top-0.5 right-0.5 bg-blue-500 text-white rounded-full p-0 w-4 h-4 flex items-center justify-center text-xs">
+                    <div className="animate-spin h-2 w-2 border border-white border-t-transparent rounded-full"></div>
+                  </div>
+                ) : !isLoading && (
+                  <button
+                    onClick={() => removeFile(file.id)}
+                    className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0 w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                    title={`Remove ${file.name}`}
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    X
+                  </button>
                 )}
               </div>
             ))}

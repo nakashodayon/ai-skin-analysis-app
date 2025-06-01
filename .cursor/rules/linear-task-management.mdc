@@ -1,0 +1,156 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Linear Task Management Rules
+
+## プロジェクト概要
+AI肌分析アプリのLinearタスク管理用のルールです。Linear MCPを使用してチケットの作成、更新、管理を行います。
+
+## Linear 組織・プロジェクト情報
+
+### 組織情報
+- **組織ID**: `e1537ead-8f4e-4c9a-a0ae-3c958c09bd0a`
+- **組織名**: Agend
+- **URLキー**: agend
+
+### チーム情報
+- **チームID**: `4a619c68-3d14-4463-b409-e9a9546e1b2d`
+- **チーム名**: Agend
+- **チームキー**: AGE
+
+### プロジェクト情報
+- **プロジェクトID**: `be678c1a-7abe-436d-a5f7-2ce0e5444f8d`
+- **プロジェクト名**: ai-skin-analysis-proj
+- **プロジェクトURL**: https://linear.app/agend/project/ai-skin-analysis-proj-180177c3ed9c/issues
+
+## ワークフロー状態ID
+
+### 基本状態
+- **Backlog**: `f95dc1a0-baef-4278-baa7-fb843e7db900`
+- **Todo**: `a9aeffb3-8435-47a2-b015-f63d4d8a6d74` 
+- **In Progress**: `bdfe565b-6b57-4c43-a3ab-e2efe0b44870`
+- **Done**: `5ae5804b-2d70-42eb-aca0-25d1565b2b91`
+
+### その他状態
+- **Canceled**: `5e14a1b3-f036-42ea-a6ea-2f330d47b56a`
+- **Duplicate**: `eb66e7a7-86a9-46af-aca4-8106c67ba4da`
+
+## ラベルID
+
+- **Feature**: `f064cb09-2f09-440b-8320-ea37c9b39d28` (色: #BB87FC)
+- **Improvement**: `aa9f4223-a55c-47e8-9754-ea84db4d08a9` (色: #4EA7FC)
+- **Bug**: `10ac646b-9c01-461e-812b-dca0210c0980` (色: #EB5757)
+
+## プロジェクトチケット構造
+
+### Phase 3: Auth - 認証システム実装
+**親タスク**: `4e2ffefb-62d3-4281-b269-24793aabcb7a` (AGE-24)
+
+#### 子タスク
+- **[Phase 3-1] Clerk設定**: `09036959-cf8a-4642-a8a6-05a4a37f68ba` (AGE-34)
+- **[Phase 3-2] ログイン・サインアップUI**: `b6fb32e4-ffd1-468d-aa3b-bb00c5ff9e40` (AGE-35)
+- **[Phase 3-3] ユーザープロフィール**: `e763aced-819c-4dd5-88a0-468669124f6c` (AGE-36)
+- **[Phase 3-4] アクセス制御**: `0cdc8b0a-d9e0-4da7-9bf6-3b7acbb26b52` (AGE-37)
+
+### Phase 4: Backend(Supabase) - データ永続化とクラウド統合
+**親タスク**: `50e15777-93fe-4648-9d80-6d9e1709791c` (AGE-25)
+
+#### 子タスク
+- **[Phase 4-1] データベース設計**: `1386070a-7baf-4d31-8bc2-710cdd2c05d4` (AGE-38)
+- **[Phase 4-2] API統合**: `2f0c6da2-f40b-4f18-92ac-661140463e32` (AGE-39)
+- **[Phase 4-3] ファイルストレージ**: `517b2dde-f67f-4a76-a656-ae73a910beed` (AGE-40)
+- **[Phase 4-4] データ移行**: `e50cf483-20cb-4dfa-91bc-c9d911630f58` (AGE-41)
+
+## Linear MCP使用ガイドライン
+
+### チケット更新時のルール
+1. **ステータス変更**: タスク開始時は`Todo`から`In Progress`に変更
+2. **完了時**: `In Progress`から`Done`に変更
+3. **コメント追加**: 進捗報告や技術的な課題を記録
+4. **優先度設定**: 1=Urgent, 2=High, 3=Normal, 4=Low
+
+### 開発フロー
+1. **タスク開始前**: チケットの詳細を確認し、必要な情報を収集
+2. **開発中**: 定期的に進捗をコメントで更新
+3. **完了時**: 成果物の確認とチケットクローズ
+4. **ブロック時**: 関連チケットとの依存関係を記録
+
+### よく使用するMCP関数
+- `getIssueById(id)`: 特定チケットの詳細取得
+- `updateIssue(id, {stateId, ...})`: チケット状態更新  
+- `createComment(issueId, body)`: コメント追加
+- `searchIssues({projectId, states})`: プロジェクト内チケット検索
+
+### 環境変数
+開発時に必要な環境変数をチェック:
+```
+GEMINI_API_KEY=your_gemini_api_key
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### ファイル参照
+- **PRD**: [PRD-mds/PRD.md](mdc:PRD-mds/PRD.md)
+- **メインアプリ**: [App.tsx](mdc:App.tsx)
+- **型定義**: [types.ts](mdc:types.ts)
+- **サービス**: [services/geminiService.ts](mdc:services/geminiService.ts)
+
+## 注意事項
+- チケットIDは常に最新のものを使用すること
+- フェーズの順序に従って開発を進めること
+- 依存関係のあるタスクは順序を守ること
+- 技術的な課題や変更点は必ずコメントで記録すること
+
+---
+
+## 新規タスク (2025年6月1日作成)
+
+### [BUG] データ保存機能の修正 - 画像・分析結果・レポートのSupabase連携改善
+
+**優先度**: 1 (Urgent)
+**ラベル**: Bug
+**状態**: Todo
+
+#### 問題概要
+- ✅ ユーザー認証・セッション作成は正常動作
+- ✅ 分析ポイント設定は正常動作  
+- ❌ 画像アップロード時に`uploaded_images`テーブルへのメタデータ保存が未実装
+- ❌ 分析結果が`analysis_results`テーブルに保存されていない（マッチングロジックの問題）
+- ❌ 総合レポートが`overall_reports`テーブルに保存されていない
+
+#### 実装済み修正内容
+1. **FileUpload.tsx**: `ImageService.saveImageMetadata`の呼び出しを追加
+2. **App.tsx**: 分析結果・レポート保存のエラーハンドリング改善
+3. **デバッグログ**: 保存処理の成功/失敗をコンソールに出力
+4. **重複作成防止**: 分析ポイントの重複作成を防ぐフラグを追加
+5. **デバッグ表示**: 開発環境でanalysisPointIdの値を表示
+
+#### 発見した課題
+- 分析ポイントの重複作成が発生（同じセッションに同じラベルで複数作成）
+- `analysisPointId`が`undefined`のケースでファイルアップロードがスキップされる
+- 分析ポイント作成とファイルアップロードのタイミング問題
+
+#### 検証手順
+1. アプリケーションを起動 (`pnpm run dev`)
+2. ログイン後、分析ポイントを作成
+3. 画像をアップロード（コンソールでImageService呼び出し確認）
+4. 分析実行（コンソールで保存ログ確認）
+5. Supabase MCPで各テーブルにデータが保存されていることを確認
+
+#### 技術的詳細
+- **影響ファイル**: `components/FileUpload.tsx`, `App.tsx`
+- **関連サービス**: `ImageService`, `AnalysisResultService`, `OverallReportService`
+- **データベーステーブル**: `uploaded_images`, `analysis_results`, `overall_reports`
+
+#### 完了条件
+- [ ] 画像アップロード時に`uploaded_images`テーブルにレコード作成
+- [ ] 分析実行時に`analysis_results`テーブルにレコード作成  
+- [ ] 総合レポート生成時に`overall_reports`テーブルにレコード作成
+- [ ] エラー発生時の適切なログ出力
+- [ ] Supabase MCPでデータ保存確認
+- [ ] 分析ポイントの重複作成問題の解決
+- [ ] `analysisPointId`が正しく渡されることの確認

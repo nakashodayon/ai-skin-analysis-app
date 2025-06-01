@@ -1,0 +1,243 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Vercel手動デプロイルール / Vercel Manual Deployment Rules
+
+## 重要な前提 / Important Prerequisites
+
+このプロジェクトはGitHubとVercelが自動連携されていないため、**すべてのデプロイは手動で実行する必要があります**。
+
+## デプロイ前必須チェックリスト / Pre-Deployment Checklist
+
+### 1. コードの確認 / Code Verification
+- [ ] すべての変更がコミットされている
+- [ ] mainブランチが最新の状態である
+- [ ] ローカルでビルドエラーがないことを確認
+- [ ] TypeScriptエラーがないことを確認
+
+### 2. ファイル構造確認 / File Structure Check
+- [ ] [package.json](mdc:package.json) の依存関係が正しい
+- [ ] [vite.config.ts](mdc:vite.config.ts) の設定が適切
+- [ ] [tsconfig.json](mdc:tsconfig.json) の設定が最新
+- [ ] [.gitignore](mdc:.gitignore) に必要な除外設定がある
+
+### 3. 環境設定確認 / Environment Configuration
+- [ ] [.env.local](mdc:.env.local) の設定が正しい
+- [ ] APIキーやシークレットが適切に設定されている
+- [ ] プロダクション用の環境変数が準備されている
+
+## デプロイコマンド手順 / Deployment Command Sequence
+
+### ステップ1: ローカルビルド確認
+```bash
+# 依存関係インストール
+npm install
+
+# ローカルビルドテスト
+npm run build
+
+# ローカル起動テスト
+npm run dev
+```
+
+### ステップ2: Gitの状態確認
+```bash
+# 現在の状態確認
+git status
+
+# mainブランチに切り替え
+git checkout main
+
+# 最新の状態に更新
+git pull origin main
+```
+
+### ステップ3: Vercelデプロイ実行
+```bash
+# プロダクションデプロイ
+npx vercel --prod --yes
+
+# または段階的デプロイの場合
+# 1. プレビューデプロイ
+npx vercel --yes
+
+# 2. プロダクション昇格
+npx vercel --prod --yes
+```
+
+## デプロイ後確認事項 / Post-Deployment Verification
+
+### 1. デプロイ状況確認
+```bash
+# デプロイ一覧確認
+npx vercel ls --yes
+
+# プロジェクト詳細確認
+npx vercel inspect [DEPLOYMENT_URL]
+```
+
+### 2. 機能確認 / Functionality Check
+- [ ] メインページが正常に表示される
+- [ ] 肌分析機能が動作する
+- [ ] 画像アップロード機能が動作する
+- [ ] API通信が正常に行われる
+- [ ] レスポンシブデザインが適切に表示される
+
+### 3. パフォーマンス確認 / Performance Check
+- [ ] ページ読み込み速度が適切
+- [ ] 画像最適化が適用されている
+- [ ] JavaScriptバンドルサイズが適切
+
+## ロールバック手順 / Rollback Procedure
+
+問題が発生した場合の緊急対応：
+
+### 即座のロールバック
+```bash
+# 前のデプロイメントを確認
+npx vercel ls --yes
+
+# 特定のデプロイメントを本番に昇格
+npx vercel promote [PREVIOUS_DEPLOYMENT_URL] --yes
+```
+
+### コードレベルでのロールバック
+```bash
+# 前のコミットに戻る
+git revert [COMMIT_HASH]
+
+# または特定のコミットまで戻る
+git reset --hard [SAFE_COMMIT_HASH]
+
+# 再デプロイ
+npx vercel --prod --yes
+```
+
+## 環境別デプロイ設定 / Environment-Specific Deployment
+
+### プレビュー環境（開発/テスト用）
+```bash
+# 機能ブランチからプレビューデプロイ
+git checkout feature/your-feature
+npx vercel --yes
+```
+
+### プロダクション環境
+```bash
+# mainブランチからのみプロダクションデプロイ
+git checkout main
+git pull origin main
+npx vercel --prod --yes
+```
+
+## トラブルシューティング / Troubleshooting
+
+### よくあるエラーと対処法
+
+#### 1. ビルドエラー
+```bash
+# 依存関係の再インストール
+rm -rf node_modules package-lock.json
+npm install
+
+# キャッシュクリア
+npm run build -- --clean
+```
+
+#### 2. 環境変数エラー
+```bash
+# Vercelの環境変数確認
+npx vercel env ls
+
+# 環境変数追加
+npx vercel env add [VAR_NAME]
+```
+
+#### 3. デプロイタイムアウト
+```bash
+# より詳細なログでデプロイ
+npx vercel --prod --yes --debug
+```
+
+## 定期メンテナンス / Regular Maintenance
+
+### 週次チェック / Weekly Checks
+- [ ] 依存関係の更新確認
+- [ ] セキュリティアップデートの確認
+- [ ] パフォーマンスメトリクスの確認
+
+### 月次チェック / Monthly Checks
+- [ ] Vercelの使用量確認
+- [ ] ビルド時間の最適化
+- [ ] 不要なデプロイメントの削除
+
+## 緊急時対応プロトコル / Emergency Response Protocol
+
+### レベル1: 軽微な問題
+1. プレビューデプロイで修正確認
+2. 問題なければプロダクションデプロイ
+
+### レベル2: 重大な問題
+1. 即座に前のバージョンにロールバック
+2. 問題の特定と修正
+3. 十分なテストを実施してから再デプロイ
+
+### レベル3: サービス停止レベル
+1. 即座にロールバック
+2. インシデント記録の作成
+3. ポストモーテムの実施
+
+## 参考コマンド一覧 / Quick Reference Commands
+
+```bash
+# 基本デプロイコマンド
+npx vercel --prod --yes
+
+# デプロイ状況確認
+npx vercel ls --yes
+
+# 特定デプロイの詳細
+npx vercel inspect [URL]
+
+# 環境変数管理
+npx vercel env ls
+npx vercel env add [NAME]
+npx vercel env rm [NAME]
+
+# プロジェクト設定
+npx vercel project ls
+npx vercel project rm [PROJECT_NAME]
+
+# ログ確認
+npx vercel logs [DEPLOYMENT_URL]
+```
+
+## 重要なプロジェクトファイル / Important Project Files
+
+デプロイに関連する主要ファイル：
+- エントリーポイント: [App.tsx](mdc:App.tsx)
+- ビルド設定: [vite.config.ts](mdc:vite.config.ts)
+- 依存関係: [package.json](mdc:package.json)
+- TypeScript設定: [tsconfig.json](mdc:tsconfig.json)
+- 環境設定: [.env.local](mdc:.env.local)
+- 除外設定: [.gitignore](mdc:.gitignore)
+- メタデータ: [metadata.json](mdc:metadata.json)
+
+## デプロイ記録テンプレート / Deployment Log Template
+
+各デプロイ時に記録すべき情報：
+```
+デプロイ日時: [YYYY-MM-DD HH:MM]
+ブランチ: [BRANCH_NAME]
+コミットハッシュ: [COMMIT_HASH]
+デプロイURL: [VERCEL_URL]
+変更内容: [CHANGE_DESCRIPTION]
+実行者: [DEPLOYER_NAME]
+問題: [ISSUES_IF_ANY]
+```
+
+---
+
+**注意**: このプロジェクトは手動デプロイのため、変更を本番環境に反映させる際は必ずこのルールに従って実行してください。
