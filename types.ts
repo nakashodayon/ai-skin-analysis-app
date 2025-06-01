@@ -1,4 +1,3 @@
-
 export interface SkinAgeReport {
   推定肌年齢: string;
   所見: string;
@@ -62,6 +61,8 @@ export interface UploadedImageFile {
   type: string; 
   base64: string; 
   previewUrl: string;
+  storageUrl?: string; // Supabase public URL
+  storagePath?: string; // Supabase storage path
 }
 
 export interface Part {
@@ -77,6 +78,7 @@ export interface AnalysisFileSet {
   name: string; // e.g., "分析ポイント #1"
   label: string; // User-defined label, e.g., "2024年1月", "前回"
   files: UploadedImageFile[];
+  supabaseId?: string; // Supabase analysis_points table ID
 }
 
 // For the overall chronological analysis report

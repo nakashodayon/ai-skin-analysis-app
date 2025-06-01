@@ -8,6 +8,8 @@ export default defineConfig(({ mode }) => {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
       },
+      // Explicitly expose Supabase environment variables
+      envPrefix: ['VITE_'],
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),

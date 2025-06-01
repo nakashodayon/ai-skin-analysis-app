@@ -5,6 +5,20 @@ alwaysApply: true
 ---
 # Git プルリクエスト（PR）ルール / Git Pull Request Rules
 
+## ⚠️ 重要ルール: 新規ブランチ作成必須 / Important Rule: New Branch Required
+
+**毎回新しいPRを作成する際は、必ず新しいブランチ名を作成してください。**
+**Every time you create a new PR, you must create a new branch name.**
+
+- 既存のブランチを再利用してはいけません
+- 各PRは独立した新しいブランチで作業すること
+- ブランチ名に日付やタスク番号を含めることを推奨
+
+例 / Examples:
+- `feature/user-auth-2024-01-15`
+- `bugfix/login-error-task-123`
+- `hotfix/security-patch-urgent-001`
+
 ## ブランチ命名規則 / Branch Naming Convention
 
 ブランチ名は以下の形式で作成してください：
@@ -41,14 +55,22 @@ alwaysApply: true
 - テストケースの説明
 - スクリーンショットやGIF（UI変更の場合）
 
+### デプロイ影響 / Deployment Impact
+- デプロイが必要な変更かどうか
+- 環境変数の変更が必要かどうか
+- ダウンタイムの有無
+- ロールバック計画
+
 ### 関連Issue / Related Issues
 - 関連するIssue番号（例: `Closes #123`, `Fixes #456`）
 
 ### チェックリスト / Checklist
 - [ ] コードレビューが完了している
 - [ ] テストが通っている
+- [ ] ローカルビルドが成功している
 - [ ] ドキュメントが更新されている（必要に応じて）
 - [ ] 破壊的変更がある場合は明記されている
+- [ ] デプロイ準備が完了している（環境変数等）
 
 ## コードレビュー要件 / Code Review Requirements
 
@@ -62,6 +84,7 @@ alwaysApply: true
 - **セキュリティ**: 脆弱性がないか
 - **テスト**: 適切なテストが書かれているか
 - **ドキュメント**: 必要な場合は更新されているか
+- **デプロイ準備**: Vercel手動デプロイの準備ができているか
 
 ## マージ要件 / Merge Requirements
 
@@ -70,11 +93,41 @@ alwaysApply: true
 - [ ] 必要なレビューが完了している
 - [ ] コンフリクトが解決されている
 - [ ] ブランチが最新のmainブランチと同期されている
+- [ ] ローカルビルドテストが成功している
 
 ### マージ方法 / Merge Strategy
 - **Squash Merge**: 小さな機能追加やバグ修正
 - **Merge Commit**: 大きな機能やリリース
 - **Rebase**: 履歴を綺麗に保ちたい場合
+
+## マージ後のデプロイワークフロー / Post-Merge Deployment Workflow
+
+⚠️ **重要**: このプロジェクトはGitHubとVercelが自動連携されていないため、**マージ後は必ず手動デプロイが必要です**。
+
+### 即座にデプロイが必要な場合
+1. PRがmainブランチにマージされる
+2. ローカルでmainブランチを最新状態に更新
+3. [Vercel手動デプロイルール](mdc:.cursor/rules/vercel-deploy-rules.mdc)に従ってデプロイ実行
+4. デプロイ後の動作確認
+
+### 段階的デプロイが必要な場合
+1. PRマージ前にプレビューデプロイで最終確認
+2. mainブランチにマージ
+3. プロダクションデプロイ実行
+4. 本番環境での動作確認
+
+### デプロイコマンド（クイックリファレンス）
+```bash
+# 1. mainブランチに切り替えて最新状態に
+git checkout main
+git pull origin main
+
+# 2. Vercelプロダクションデプロイ
+npx vercel --prod --yes
+
+# 3. デプロイ状況確認
+npx vercel ls --yes
+```
 
 ## 禁止事項 / Prohibited Actions
 
@@ -82,14 +135,62 @@ alwaysApply: true
 - レビューなしでのマージ
 - 作業中（WIP）の状態でのマージ
 - テストが失敗している状態でのマージ
+- **デプロイなしでのプロダクション影響のあるマージ**
 
 ## 緊急時の例外処理 / Emergency Exception Process
 
 緊急時（セキュリティパッチ、重大なバグ修正）の場合：
 1. hotfixブランチを作成
 2. 可能な限り迅速にレビューを実施
-3. マージ後、必ず事後レビューを実施
-4. インシデントレポートを作成
+3. mainブランチにマージ
+4. **即座に緊急デプロイ実行**
+5. 必ず事後レビューを実施
+6. インシデントレポートを作成
+
+### 緊急デプロイコマンド
+```bash
+git checkout main
+git pull origin main
+npx vercel --prod --yes --debug
+```
+
+## プルリクエストテンプレート / PR Template
+
+PRの説明に以下のテンプレートを使用してください：
+
+```markdown
+## 変更内容 / Changes
+- [ ] 機能追加
+- [ ] バグ修正
+- [ ] リファクタリング
+- [ ] ドキュメント更新
+- [ ] その他: ___________
+
+## 変更の説明 / Description
+<!-- 何を変更したか、なぜ変更したかを記述 -->
+
+## テスト / Testing
+<!-- 実行したテストの内容を記述 -->
+- [ ] ローカルビルドテスト実行済み
+- [ ] 機能テスト実行済み
+- [ ] ブラウザテスト実行済み
+
+## デプロイ関連 / Deployment
+- [ ] デプロイが必要
+- [ ] 環境変数の変更が必要
+- [ ] ダウンタイムの可能性あり
+- [ ] ロールバック計画準備済み
+
+## スクリーンショット / Screenshots
+<!-- UI変更がある場合はスクリーンショットを添付 -->
+
+## チェックリスト / Checklist
+- [ ] レビューを要請済み
+- [ ] テストが通っている
+- [ ] ドキュメントを更新した（必要に応じて）
+- [ ] 破壊的変更がある場合は明記した
+- [ ] デプロイ準備が完了している
+```
 
 ## 参考資料 / References
 
@@ -98,3 +199,8 @@ alwaysApply: true
 - 設定ファイル: [package.json](mdc:package.json)
 - TypeScript設定: [tsconfig.json](mdc:tsconfig.json)
 - Vite設定: [vite.config.ts](mdc:vite.config.ts)
+- Vercelデプロイルール: [vercel-deploy-rules.mdc](mdc:.cursor/rules/vercel-deploy-rules.mdc)
+
+---
+
+**重要な注意事項**: このプロジェクトでは手動デプロイが必須のため、PRのマージ後は必ず[Vercelデプロイルール](mdc:.cursor/rules/vercel-deploy-rules.mdc)に従ってデプロイを実行してください。
