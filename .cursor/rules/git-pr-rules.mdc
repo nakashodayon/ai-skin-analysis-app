@@ -1,0 +1,100 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Git プルリクエスト（PR）ルール / Git Pull Request Rules
+
+## ブランチ命名規則 / Branch Naming Convention
+
+ブランチ名は以下の形式で作成してください：
+- **機能追加**: `feature/機能名` または `feature/feature-name`
+- **バグ修正**: `bugfix/修正内容` または `bugfix/bug-description`
+- **ホットフィックス**: `hotfix/緊急修正内容` または `hotfix/urgent-fix`
+- **リファクタリング**: `refactor/対象モジュール` または `refactor/module-name`
+
+例: `feature/user-authentication`, `bugfix/login-error`, `hotfix/security-patch`
+
+## プルリクエストのタイトル / PR Title
+
+明確で説明的なタイトルを付けてください：
+- 何を変更したかを簡潔に記述
+- 日本語または英語で記述
+- プレフィックスを使用（例: `[Feature]`, `[Bugfix]`, `[Hotfix]`）
+
+例:
+- `[Feature] ユーザー認証機能の追加`
+- `[Bugfix] ログインエラーの修正`
+- `[Refactor] API通信部分のリファクタリング`
+
+## プルリクエストの説明 / PR Description
+
+以下の内容を含めてください：
+
+### 変更内容 / Changes Made
+- 何を変更したか
+- なぜ変更したか
+- どのように変更したか
+
+### テスト / Testing
+- どのようなテストを実行したか
+- テストケースの説明
+- スクリーンショットやGIF（UI変更の場合）
+
+### 関連Issue / Related Issues
+- 関連するIssue番号（例: `Closes #123`, `Fixes #456`）
+
+### チェックリスト / Checklist
+- [ ] コードレビューが完了している
+- [ ] テストが通っている
+- [ ] ドキュメントが更新されている（必要に応じて）
+- [ ] 破壊的変更がある場合は明記されている
+
+## コードレビュー要件 / Code Review Requirements
+
+### レビュアー / Reviewers
+- 最低1名のレビュアーが必要
+- 重要な変更には2名以上のレビューが推奨
+- コードオーナーのレビューが必要な場合は指定
+
+### レビュー観点 / Review Points
+- **コード品質**: 可読性、保守性、パフォーマンス
+- **セキュリティ**: 脆弱性がないか
+- **テスト**: 適切なテストが書かれているか
+- **ドキュメント**: 必要な場合は更新されているか
+
+## マージ要件 / Merge Requirements
+
+### 必須条件 / Required Conditions
+- [ ] すべてのCIチェックが通っている
+- [ ] 必要なレビューが完了している
+- [ ] コンフリクトが解決されている
+- [ ] ブランチが最新のmainブランチと同期されている
+
+### マージ方法 / Merge Strategy
+- **Squash Merge**: 小さな機能追加やバグ修正
+- **Merge Commit**: 大きな機能やリリース
+- **Rebase**: 履歴を綺麗に保ちたい場合
+
+## 禁止事項 / Prohibited Actions
+
+- mainブランチへの直接push
+- レビューなしでのマージ
+- 作業中（WIP）の状態でのマージ
+- テストが失敗している状態でのマージ
+
+## 緊急時の例外処理 / Emergency Exception Process
+
+緊急時（セキュリティパッチ、重大なバグ修正）の場合：
+1. hotfixブランチを作成
+2. 可能な限り迅速にレビューを実施
+3. マージ後、必ず事後レビューを実施
+4. インシデントレポートを作成
+
+## 参考資料 / References
+
+このプロジェクトの主要ファイル：
+- メインアプリケーション: [App.tsx](mdc:App.tsx)
+- 設定ファイル: [package.json](mdc:package.json)
+- TypeScript設定: [tsconfig.json](mdc:tsconfig.json)
+- Vite設定: [vite.config.ts](mdc:vite.config.ts)
